@@ -1,17 +1,23 @@
-show streams;
-select * from customer_table_changes;
+USE DATABASE SCD_DEMO;
 
-insert into customer values(223136,'Jessica','Arnold','tanner39@smith.com','595 Benjamin Forge Suite 124','Michaelstad','Connecticut'
+USE SCHEMA SCD_DEMO.SCD2;
+
+SHOW STREAMS;
+
+SELECT * FROM CUSTOMER_TABLE_CHANGES;
+
+-- Now if we make some changes
+-- Insert new row
+INSERT INTO customer values(223136,'Jessica','Arnold','tanner39@smith.com','595 Benjamin Forge Suite 124','Michaelstad','Connecticut'
                             ,'Cape Verde',current_timestamp());
-update customer set FIRST_NAME='Jessica', update_timestamp = current_timestamp()::timestamp_ntz where customer_id=72;
-delete from customer where customer_id =73 ;
 
-select * from customer_history where customer_id in (72,73,223136);
-select * from customer_table_changes;
-select * from  customer where customer_id in (72,73,223136);
+-- Update row
+UPDATE customer SET first_name = 'Jessica', update_timestamp = current_timestamp()::timestamp_ntz where customer_id = 72;
 
+-- Delete Row
+DELETE FROM customer WHERE customer_id = 73;
 
---View Creation--
+-- Creating a view to track all of these changes
 create or replace view v_customer_change_data as
 -- This subquery figures out what to do when data is inserted into the customer table
 -- An insert to the customer table results in an INSERT to the customer_HISTORY table
@@ -64,7 +70,8 @@ where ctc.metadata$action = 'DELETE'
 and   ctc.metadata$isupdate = 'FALSE'
 and   ch.is_current = TRUE;
 
-select * from v_customer_change_data;
+SELECT * FROM v_customer_change_data;
+
 
 create or replace task tsk_scd_hist warehouse= COMPUTE_WH schedule='1 minute'
 ERROR_ON_NONDETERMINISTIC_MERGE=FALSE
@@ -83,22 +90,27 @@ when not matched and ccd.dml_type = 'I' then insert -- Inserting a new CUSTOMER_
           (CUSTOMER_ID, FIRST_NAME, LAST_NAME, EMAIL, STREET, CITY,STATE,COUNTRY, start_time, end_time, is_current)
     values (ccd.CUSTOMER_ID, ccd.FIRST_NAME, ccd.LAST_NAME, ccd.EMAIL, ccd.STREET, ccd.CITY,ccd.STATE,ccd.COUNTRY, ccd.start_time, ccd.end_time, ccd.is_current);
     
-show tasks;
-alter task tsk_scd_hist suspend;--resume --suspend
 
+SHOW TASKS;
+
+ALTER TASK TSK_SCD_HIST resume;
 
 
 insert into customer values(223136,'Jessica','Arnold','tanner39@smith.com','595 Benjamin Forge Suite 124','Michaelstad','Connecticut'
                             ,'Cape Verde',current_timestamp());
 update customer set FIRST_NAME='Jessica' where customer_id=7523;
 delete from customer where customer_id =136 and FIRST_NAME = 'Kim';
+
 select count(*),customer_id from customer group by customer_id having count(*)=1;
 select * from customer_history where customer_id =223136;
 select * from customer_history where IS_CURRENT=TRUE;
 
---alter warehouse suspend;
-select timestampdiff(second, current_timestamp, scheduled_time) as next_run, scheduled_time, current_timestamp, name, state 
-from table(information_schema.task_history()) where state = 'SCHEDULED' order by completed_time desc;
 
-select * from customer_history where IS_CURRENT=FALSE;
-show tasks;
+-- Make sure to close everything 
+alter task tsk_scd_hist suspend;
+
+
+
+
+
+
