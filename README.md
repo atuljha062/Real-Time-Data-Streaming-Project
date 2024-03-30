@@ -5,6 +5,8 @@ This project implements a real-time data pipeline for continuous data ingestion 
 
 ### Architecture
 
+![Architecture Diagram](https://github.com/atuljha062/Real-Time-Data-Streaming-Project/blob/main/architecture_diagram.jpg)
+
 ### About Data
 This project utilizes Faker to generate real-time data resembling customer records and stores them in CSV files within a designated folder on the EC2 instance. While the data provides a realistic simulation, it's for demonstration purposes only.
 
